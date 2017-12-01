@@ -56,6 +56,10 @@ class WhatsappDriver(object):
             print('NOT LOGGED IN')
             self.log_in()
 
+    def quit(self):
+
+        self.web_driver.quit()
+
     def screenshot(self, img_file):
         self.web_driver.get_screenshot_as_file(img_file)
 
@@ -145,6 +149,11 @@ class WhatsappDriver(object):
 
     def open_conversation(self, phone_number):
 
+        WebDriverWait(self.web_driver, 10).until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, 'input.input-search')
+            )
+        )
         search_box = self.web_driver.find_element_by_css_selector(
             'input.input-search'
         )
