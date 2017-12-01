@@ -21,22 +21,21 @@ class Message(object):
 
 class WhatsappDriver(object):
 
-    CHROME_DRIVER_PATH = 'webdriver/chromedriver'
-    CHROME_DATA_PATH = 'data/whatsapp-driver'
     USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 ' \
                  '(KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
 
     @classmethod
-    def start(cls):
+    def start(cls, chrome_driver_path, chrome_data_path):
 
         options = webdriver.ChromeOptions()
-        options.add_argument('--user-data-dir=' + cls.CHROME_DATA_PATH)
+        options.add_argument('--user-data-dir=' + chrome_data_path)
         options.add_argument('--headless')
         options.add_argument('--disable-gpu')
+        options.add_argument('--window-size=650,1650')
         options.add_argument('user-agent={}'.format(cls.USER_AGENT))
         web_driver = webdriver.Chrome(
             chrome_options=options,
-            executable_path=cls.CHROME_DRIVER_PATH
+            executable_path=chrome_driver_path
         )
 
         return cls(web_driver)
@@ -57,6 +56,9 @@ class WhatsappDriver(object):
             print('NOT LOGGED IN')
             self.log_in()
 
+    def screenshot(self, img_file):
+        self.web_driver.get_screenshot_as_file(img_file)
+
     def log_in(self):
 
         WebDriverWait(self.web_driver, 10).until(
@@ -64,7 +66,7 @@ class WhatsappDriver(object):
                 (By.CSS_SELECTOR, '.app-wrapper img')
             )
         )
-        self.web_driver.get_screenshot_as_file('login.png')
+        self.screenshot('login.png')
         while True:
             main = self.web_driver.find_elements_by_class_name(
                 'app-wrapper-main'
