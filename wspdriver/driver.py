@@ -31,7 +31,7 @@ class WhatsappDriver(object):
         options.add_argument('--user-data-dir=' + chrome_data_path)
         options.add_argument('--headless')
         options.add_argument('--disable-gpu')
-        options.add_argument('--window-size=650,1650')
+        options.add_argument('--window-size=650,650')
         options.add_argument('user-agent={}'.format(cls.USER_AGENT))
         web_driver = webdriver.Chrome(
             chrome_options=options,
@@ -49,12 +49,6 @@ class WhatsappDriver(object):
                 (By.CLASS_NAME, 'app-wrapper')
             )
         )
-
-        if self.is_logged_in():
-            print('LOGGED IN')
-        else:
-            print('NOT LOGGED IN')
-            self.log_in()
 
     def quit(self):
 
@@ -93,9 +87,12 @@ class WhatsappDriver(object):
             if len(image) > 0:
                 return False
 
-            time.sleep(1)
+            time.sleep(0.1)
 
     def get_unread_chats(self):
+
+        if not self.is_logged_in():
+            raise NotLoggedInException
 
         chats = self.web_driver.find_elements_by_css_selector('.chat.unread')
         for chat in chats:
@@ -103,11 +100,17 @@ class WhatsappDriver(object):
 
     def get_chats(self):
 
+        if not self.is_logged_in():
+            raise NotLoggedInException
+
         chats = self.web_driver.find_elements_by_css_selector('.chat')
         for chat in chats:
             yield WhatsAppChat(chat, self)
 
     def get_current_chat_messages(self):
+
+        if not self.is_logged_in():
+            raise NotLoggedInException
 
         messages = self.web_driver.find_elements_by_css_selector(
             '.pane-chat-msgs .message-chat'
@@ -149,6 +152,9 @@ class WhatsappDriver(object):
 
     def open_conversation(self, phone_number):
 
+        if not self.is_logged_in():
+            raise NotLoggedInException
+
         WebDriverWait(self.web_driver, 10).until(
             EC.presence_of_element_located(
                 (By.CSS_SELECTOR, 'input.input-search')
@@ -182,3 +188,7 @@ class WhatsappDriver(object):
             'button.compose-btn-send'
         )
         send_button.click()
+
+
+class NotLoggedInException(Exception):
+    pass
