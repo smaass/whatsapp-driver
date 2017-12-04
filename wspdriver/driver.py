@@ -9,16 +9,6 @@ from wspdriver.chat import WhatsAppChat
 from wspdriver.message import WhatsappMessage
 
 
-class Message(object):
-
-    def __init__(self, user, message):
-        self.user = user
-        self.message = message
-
-    def __eq__(self, other):
-        return self.message == other.message
-
-
 class WhatsappDriver(object):
 
     USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 ' \
