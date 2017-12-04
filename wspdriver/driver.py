@@ -1,4 +1,6 @@
+import hashlib
 import time
+from functools import reduce
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -39,6 +41,17 @@ class WhatsappDriver(object):
                 (By.CLASS_NAME, 'app-wrapper')
             )
         )
+        self.whatsapp_web_version = self.get_wsp_web_version()
+
+    def get_wsp_web_version(self):
+
+        scripts = [
+            script.get_attribute('src') for script in
+            self.web_driver.find_elements_by_tag_name('script')
+        ]
+
+        to_hash = reduce(lambda a, b: a + '|' + b, sorted(scripts), '')
+        return hashlib.md5(to_hash.encode()).hexdigest()
 
     def quit(self):
 
@@ -130,18 +143,6 @@ class WhatsappDriver(object):
 
         for chat in self.get_unread_chats():
             yield from self.ensure_no_duplicates(chat.get_messages())
-
-    def listen_new_messages(self):
-
-        print('Listening to messages...')
-        while True:
-            for message in self.get_unread_messages():
-                print('[{}] {}: {}'.format(
-                    message.datetime,
-                    'Me' if message.is_outbound else message.author_name,
-                    message.text
-                ))
-            time.sleep(1)
 
     def open_conversation(self, phone_number):
 
