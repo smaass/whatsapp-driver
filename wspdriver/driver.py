@@ -59,6 +59,9 @@ class WhatsappDriver(object):
 
     def log_in(self):
 
+        if self.is_logged_in():
+            raise AlreadyLoggedInException()
+
         WebDriverWait(self.web_driver, 10).until(
             EC.presence_of_element_located(
                 (By.CSS_SELECTOR, '.app-wrapper img')
@@ -92,7 +95,7 @@ class WhatsappDriver(object):
     def get_unread_chats(self):
 
         if not self.is_logged_in():
-            raise NotLoggedInException
+            raise NotLoggedInException()
 
         chats = self.web_driver.find_elements_by_css_selector('.chat.unread')
         for chat in chats:
@@ -101,7 +104,7 @@ class WhatsappDriver(object):
     def get_chats(self):
 
         if not self.is_logged_in():
-            raise NotLoggedInException
+            raise NotLoggedInException()
 
         chats = self.web_driver.find_elements_by_css_selector('.chat')
         for chat in chats:
@@ -110,7 +113,7 @@ class WhatsappDriver(object):
     def get_current_chat_messages(self):
 
         if not self.is_logged_in():
-            raise NotLoggedInException
+            raise NotLoggedInException()
 
         messages = self.web_driver.find_elements_by_css_selector(
             '.pane-chat-msgs .message-chat'
@@ -153,7 +156,7 @@ class WhatsappDriver(object):
     def open_conversation(self, phone_number):
 
         if not self.is_logged_in():
-            raise NotLoggedInException
+            raise NotLoggedInException()
 
         WebDriverWait(self.web_driver, 10).until(
             EC.presence_of_element_located(
@@ -191,4 +194,8 @@ class WhatsappDriver(object):
 
 
 class NotLoggedInException(Exception):
+    pass
+
+
+class AlreadyLoggedInException(Exception):
     pass
