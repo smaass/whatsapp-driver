@@ -1,7 +1,10 @@
+import base64
 import hashlib
 import time
 from functools import reduce
+from io import BytesIO
 
+from PIL import Image
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -58,9 +61,27 @@ class WhatsappDriver(object):
         self.web_driver.quit()
 
     def screenshot(self, img_file):
+
         self.web_driver.get_screenshot_as_file(img_file)
 
-    def log_in(self):
+    def capture_login(self):
+
+        login_element = self.web_driver.find_element_by_css_selector(
+            '.app-wrapper img'
+        )
+        login_image_base64 = login_element.get_attribute('src')
+        return login_image_base64
+
+    def save_login_as_image(self, filename):
+
+        login_image_base64 = self.get_log_in_code()\
+            .replace('data:image/png;base64,', '')\
+            .encode('ascii')
+
+        image = Image.open(BytesIO(base64.decodebytes(login_image_base64)))
+        image.save(filename)
+
+    def get_log_in_code(self):
 
         if self.is_logged_in():
             raise AlreadyLoggedInException()
@@ -70,14 +91,21 @@ class WhatsappDriver(object):
                 (By.CSS_SELECTOR, '.app-wrapper img')
             )
         )
-        self.screenshot('login.png')
-        while True:
+        return self.capture_login()
+
+    def wait_for_login(self, timeout=None):
+
+        seconds_passed = 0
+        while timeout is None or timeout > seconds_passed:
             main = self.web_driver.find_elements_by_class_name(
                 'app-wrapper-main'
             )
             if len(main) > 0:
                 return
             time.sleep(1)
+            seconds_passed += 1
+
+        raise LoginTimeoutError('{} seconds passed'.format(timeout))
 
     def is_logged_in(self):
 
@@ -189,4 +217,8 @@ class NotLoggedInException(Exception):
 
 
 class AlreadyLoggedInException(Exception):
+    pass
+
+
+class LoginTimeoutError(TimeoutError):
     pass
