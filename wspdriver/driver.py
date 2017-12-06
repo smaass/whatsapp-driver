@@ -180,8 +180,7 @@ class WhatsappDriver(object):
             .click().perform()
 
         self.wait_until_clickable('li div[title="Ver foto"]').click()
-        phone_number = self.wait_until_located('span.emojitext')\
-            .text.replace(' ', '').replace('+', '')
+        phone_number = self.wait_until_located('span.emojitext')
 
         self.wait_until_clickable('span[data-icon="x-viewer"]').click()
         time.sleep(0.6)  # Animation...
