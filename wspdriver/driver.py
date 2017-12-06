@@ -6,12 +6,15 @@ from io import BytesIO
 
 from PIL import Image
 from selenium import webdriver
+from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from wspdriver.chat import WhatsAppChat
 from wspdriver.message import WhatsappMessage
+from wspdriver.user import User
 
 
 class WhatsappDriver(object):
@@ -56,21 +59,39 @@ class WhatsappDriver(object):
         to_hash = reduce(lambda a, b: a + '|' + b, sorted(scripts), '')
         return hashlib.md5(to_hash.encode()).hexdigest()
 
+    def wait_until(self, finder, css_selector, timeout):
+
+        return WebDriverWait(self.web_driver, timeout).until(
+            finder((By.CSS_SELECTOR, css_selector))
+        )
+
+    def wait_until_clickable(self, css_selector, timeout=10):
+
+        return self.wait_until(
+            EC.element_to_be_clickable,
+            css_selector,
+            timeout
+        )
+
+    def wait_until_located(self, css_selector, timeout=10):
+
+        return self.wait_until(
+            EC.presence_of_element_located,
+            css_selector,
+            timeout
+        )
+
     def quit(self):
 
         self.web_driver.quit()
 
-    def screenshot(self, img_file):
+    def save_screenshot(self, img_file):
 
         self.web_driver.get_screenshot_as_file(img_file)
 
-    def capture_login(self):
+    def get_screenshot(self):
 
-        login_element = self.web_driver.find_element_by_css_selector(
-            '.app-wrapper img'
-        )
-        login_image_base64 = login_element.get_attribute('src')
-        return login_image_base64
+        return self.web_driver.get_screenshot_as_png()
 
     def save_login_as_image(self, filename):
 
@@ -86,12 +107,9 @@ class WhatsappDriver(object):
         if self.is_logged_in():
             raise AlreadyLoggedInException()
 
-        WebDriverWait(self.web_driver, 10).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, '.app-wrapper img')
-            )
-        )
-        return self.capture_login()
+        login_element = self.wait_until_located('.app-wrapper img')
+        login_image_base64 = login_element.get_attribute('src')
+        return login_image_base64
 
     def wait_for_login(self, timeout=None):
 
@@ -115,13 +133,61 @@ class WhatsappDriver(object):
             )
             if len(main) > 0:
                 return True
-            image = self.web_driver.find_elements_by_css_selector(
-                '.app-wrapper img'
+            logo = self.web_driver.find_elements_by_css_selector(
+                'span[data-icon="logo"]'
             )
-            if len(image) > 0:
+            if len(logo) > 0:
                 return False
 
             time.sleep(0.1)
+
+    def get_avatar(self, avatar_url):
+
+        self.web_driver.execute_script("window.open('','_blank');")
+        windows = self.web_driver.window_handles
+        self.web_driver.switch_to_window(windows[1])
+        self.web_driver.get(avatar_url)
+        img_element = self.wait_until_located('img')
+        img_location = img_element.location
+        img_size = img_element.size
+
+        image = Image.open(BytesIO(self.get_screenshot()))
+        left = img_location['x']
+        top = img_location['y']
+        right = left + img_size['width']
+        bottom = top + img_size['height']
+        image.crop((left, top, right, bottom))
+
+        self.web_driver.close()
+        self.web_driver.switch_to_window(windows[0])
+        return image
+
+    def get_user_data(self):
+
+        if not self.is_logged_in():
+            raise NotLoggedInException()
+
+        self.wait_until_clickable('.pane-list-user .avatar').click()
+        name = self.wait_until_clickable('.drawer .pluggable-input-body').text
+
+        avatar_element = self.wait_until_clickable('.drawer img')
+        avatar_url = avatar_element.get_attribute('src')
+        avatar = self.get_avatar(avatar_url)
+
+        time.sleep(0.5)  # Animation...
+        ActionChains(self.web_driver)\
+            .move_to_element(avatar_element)\
+            .click().perform()
+
+        self.wait_until_clickable('li div[title="Ver foto"]').click()
+        phone_number = self.wait_until_located('span.emojitext')\
+            .text.replace(' ', '').replace('+', '')
+
+        self.wait_until_clickable('span[data-icon="x-viewer"]').click()
+        time.sleep(0.6)  # Animation...
+
+        self.wait_until_clickable('.drawer-header .btn-close-drawer').click()
+        return User(phone_number, name, avatar)
 
     def get_unread_chats(self):
 
@@ -177,27 +243,14 @@ class WhatsappDriver(object):
         if not self.is_logged_in():
             raise NotLoggedInException()
 
-        WebDriverWait(self.web_driver, 10).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, 'input.input-search')
-            )
-        )
-        search_box = self.web_driver.find_element_by_css_selector(
-            'input.input-search'
-        )
+        # search_box = self.wait_until_located('input.input-search')
+        search_box = self.wait_until_located('#input-chatlist-search')
         search_box.send_keys(phone_number)
-        WebDriverWait(self.web_driver, 10).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, '.list-search > span .icon-spinner')
-            )
-        )
-        WebDriverWait(self.web_driver, 10).until(
-            EC.presence_of_element_located(
-                (By.CSS_SELECTOR, '.list-search > span .icon-close-search')
-            )
-        )
-        chat_element = self.web_driver.find_element_by_class_name('chat')
-        chat_element.click()
+        time.sleep(0.5)
+        search_box.send_keys(Keys.RETURN)
+
+        # self.wait_until_located('.list-search > span .icon-spinner')
+        # self.wait_until_located('.list-search > span .icon-close-search')
 
     def send_message(self, phone_number, message):
 
