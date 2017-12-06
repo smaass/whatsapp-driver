@@ -19,10 +19,14 @@ if __name__ == '__main__':
     # print('SENDING MESSAGE')
     # driver.send_message('56999645308', 'Oli, soy un bot')
 
-    chats = driver.get_chats()
-    chat = chats.__next__()
-    for message in chat.get_messages():
-        print(message.id)
-        print(message)
-    driver.screenshot('demo.png')
+    # chats = driver.get_chats()
+    # chat = chats.__next__()
+    # for message in chat.get_messages():
+    #     print(message.id)
+    #     print(message)
+
+    user = driver.get_user_data()
+    print(user.phone_number, user.name)
+    user.avatar.save('avatar.png')
+    driver.save_screenshot('demo.png')
     driver.quit()
