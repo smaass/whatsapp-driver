@@ -6,6 +6,7 @@ from io import BytesIO
 
 from PIL import Image
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -170,7 +171,11 @@ class WhatsappDriver(object):
         self.wait_until_clickable('.pane-list-user .avatar').click()
         name = self.wait_until_clickable('.drawer .pluggable-input-body').text
 
-        avatar_element = self.wait_until_clickable('.drawer img')
+        try:
+            avatar_element = self.wait_until_clickable('.drawer img')
+        except TimeoutException:
+            raise AvatarNotFoundException()
+
         avatar_url = avatar_element.get_attribute('src')
         avatar = self.get_avatar(avatar_url)
 
@@ -273,4 +278,8 @@ class AlreadyLoggedInException(Exception):
 
 
 class LoginTimeoutError(TimeoutError):
+    pass
+
+
+class AvatarNotFoundException(Exception):
     pass
