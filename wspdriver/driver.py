@@ -6,7 +6,7 @@ from io import BytesIO
 
 from PIL import Image
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -24,14 +24,17 @@ class WhatsappDriver(object):
                  '(KHTML, like Gecko) Chrome/60.0.3112.50 Safari/537.36'
 
     @classmethod
-    def start(cls, chrome_driver_path, chrome_data_path):
+    def start(cls, chrome_driver_path, chrome_data_path, headless=True):
 
         options = webdriver.ChromeOptions()
         options.add_argument('--user-data-dir=' + chrome_data_path)
-        options.add_argument('--headless')
-        options.add_argument('--disable-gpu')
         options.add_argument('--window-size=650,650')
         options.add_argument('user-agent={}'.format(cls.USER_AGENT))
+
+        if headless:
+            options.add_argument('--headless')
+            options.add_argument('--disable-gpu')
+
         web_driver = webdriver.Chrome(
             chrome_options=options,
             executable_path=chrome_driver_path
@@ -59,6 +62,13 @@ class WhatsappDriver(object):
 
         to_hash = reduce(lambda a, b: a + '|' + b, sorted(scripts), '')
         return hashlib.md5(to_hash.encode()).hexdigest()
+
+    def find_element_by_selector(self, selector):
+
+        try:
+            return self.web_driver.find_element_by_css_selector(selector)
+        except NoSuchElementException:
+            return None
 
     def wait_until(self, finder, css_selector, timeout):
 
@@ -185,22 +195,45 @@ class WhatsappDriver(object):
             .click().perform()
 
         self.wait_until_clickable('li div[title="Ver foto"]').click()
-        phone_number = self.wait_until_located('span.emojitext')
+        phone_number = self.wait_until_located('span.emojitext').text
 
         self.wait_until_clickable('span[data-icon="x-viewer"]').click()
         time.sleep(0.6)  # Animation...
 
         self.wait_until_clickable('.drawer-header .btn-close-drawer').click()
+        time.sleep(0.5)  # Animation...
         return User(phone_number, name, avatar)
+
+    def scroll_to_chatlist_top(self):
+
+        self.web_driver.execute_script(
+            'arguments[0].scrollIntoView()',
+            self.find_element_by_selector(
+                '.chatlist-panel-body div:first-child')
+        )
+
+    def get_unread_chat(self, first_try=True):
+
+        if not self.is_logged_in():
+            raise NotLoggedInException()
+
+        chat = self.find_element_by_selector('.chat.unread')
+        if chat:
+            return WhatsAppChat(chat, self)
+        elif first_try:
+            self.scroll_to_chatlist_top()
+            return self.get_unread_chat(False)
+        return None
 
     def get_unread_chats(self):
 
         if not self.is_logged_in():
             raise NotLoggedInException()
 
-        chats = self.web_driver.find_elements_by_css_selector('.chat.unread')
-        for chat in chats:
-            yield WhatsAppChat(chat, self)
+        chat = self.get_unread_chat()
+        while chat:
+            yield chat
+            chat = self.get_unread_chat()
 
     def get_chats(self):
 

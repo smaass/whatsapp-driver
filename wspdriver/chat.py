@@ -1,3 +1,6 @@
+import time
+from selenium.common.exceptions import WebDriverException
+
 from wspdriver.message import WhatsappMessage
 
 
@@ -14,11 +17,26 @@ class WhatsAppChat(object):
             'arguments[0].scrollIntoView()',
             self.chat_element
         )
-        self.chat_element.click()
+        time.sleep(0.2)  # Scroll...
+        try:
+            self.chat_element.click()
+        except WebDriverException as e:
+            print(self.name)
+            raise e
+
+    def ensure_scroll_to_bottom(self):
+
+        incoming_btn = self.whatsapp_driver.find_element_by_selector(
+            '.incoming-msgs'
+        )
+        if incoming_btn:
+            incoming_btn.click()
+            time.sleep(0.5)
 
     def get_messages(self):
 
         self.select()
+        self.ensure_scroll_to_bottom()
         messages = self.web_driver.find_elements_by_css_selector(
             '.pane-chat-msgs .message-chat'
         )

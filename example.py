@@ -29,4 +29,6 @@ if __name__ == '__main__':
     print(user.phone_number, user.name)
     user.avatar.save('avatar.png')
     driver.save_screenshot('demo.png')
+    for message in driver.get_unread_messages():
+        print(message)
     driver.quit()
