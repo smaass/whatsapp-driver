@@ -54,9 +54,16 @@ class REPL(object):
                 return 'All chats read.'
 
         if user_input == 'get_unread_chats':
-            # for chat in self.driver.get_unread_chats():
-            #     return ''
-            return 'All chats read.'
+            for chat in self.driver.get_unread_chats():
+                for message in chat.get_messages():
+                    print(message)
+            return 'Ok.'
+
+        if user_input == 'send_message':
+            phone_number = input('To: ')
+            message = input('Message: ')
+            self.driver.send_message(phone_number, message)
+            return 'Ok.'
 
         return 'Command not understood: {}'.format(user_input)
 
@@ -67,7 +74,7 @@ if __name__ == '__main__':
     driver = WhatsappDriver.start(
         'webdriver/chromedriver',
         'data/whatsapp-driver',
-        False
+        headless=True
     )
 
     repl = REPL(driver)
