@@ -24,24 +24,15 @@ class WhatsAppChat(object):
             print(self.name)
             raise e
 
-    def ensure_scroll_to_bottom(self):
-
-        incoming_btn = self.whatsapp_driver.find_element_by_selector(
-            '.incoming-msgs'
-        )
-        if incoming_btn:
-            incoming_btn.click()
-            time.sleep(0.5)
-
     def get_messages(self):
 
         self.select()
-        self.ensure_scroll_to_bottom()
+        self.whatsapp_driver.ensure_scroll_to_chat_bottom()
         messages = self.web_driver.find_elements_by_css_selector(
-            '.pane-chat-msgs .message-chat'
+            '.pane-chat-msgs .message'
         )
-        for message in messages:
-            yield WhatsappMessage(message)
+        for message_element in messages:
+            yield WhatsappMessage.build(message_element, self.whatsapp_driver)
 
     @property
     def name(self):

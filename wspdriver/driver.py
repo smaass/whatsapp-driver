@@ -152,12 +152,12 @@ class WhatsappDriver(object):
 
             time.sleep(0.1)
 
-    def get_avatar(self, avatar_url):
+    def get_image(self, image_url):
 
         self.web_driver.execute_script("window.open('','_blank');")
         windows = self.web_driver.window_handles
         self.web_driver.switch_to_window(windows[1])
-        self.web_driver.get(avatar_url)
+        self.web_driver.get(image_url)
         img_element = self.wait_until_located('img')
         img_location = img_element.location
         img_size = img_element.size
@@ -187,7 +187,7 @@ class WhatsappDriver(object):
             raise AvatarNotFoundException()
 
         avatar_url = avatar_element.get_attribute('src')
-        avatar = self.get_avatar(avatar_url)
+        avatar = self.get_image(avatar_url)
 
         time.sleep(0.5)  # Animation...
         ActionChains(self.web_driver)\
@@ -244,16 +244,24 @@ class WhatsappDriver(object):
         for chat in chats:
             yield WhatsAppChat(chat, self)
 
+    def ensure_scroll_to_chat_bottom(self):
+
+        incoming_btn = self.find_element_by_selector('.incoming-msgs')
+        if incoming_btn:
+            incoming_btn.click()
+            time.sleep(0.5)
+
     def get_current_chat_messages(self):
 
         if not self.is_logged_in():
             raise NotLoggedInException()
 
+        self.ensure_scroll_to_chat_bottom()
         messages = self.web_driver.find_elements_by_css_selector(
-            '.pane-chat-msgs .message-chat'
+            '.pane-chat-msgs .message'
         )
-        for message in messages:
-            yield WhatsappMessage(message)
+        for message_element in messages:
+            yield WhatsappMessage.build(message_element, self)
 
     read_messages = set()
 

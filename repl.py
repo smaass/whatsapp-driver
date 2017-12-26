@@ -59,6 +59,17 @@ class REPL(object):
                     print(message)
             return 'Ok.'
 
+        if user_input == 'get_current_chat':
+            for message in self.driver.get_current_chat_messages():
+                print(message)
+            return 'Ok.'
+
+        if user_input == 'get_current_chat_images':
+            for message in self.driver.get_current_chat_messages():
+                if message.is_image():
+                    print(message)
+            return 'Ok.'
+
         if user_input == 'send_message':
             phone_number = input('To: ')
             message = input('Message: ')
@@ -74,7 +85,7 @@ if __name__ == '__main__':
     driver = WhatsappDriver.start(
         'webdriver/chromedriver',
         'data/whatsapp-driver',
-        headless=True
+        headless=False
     )
 
     repl = REPL(driver)
