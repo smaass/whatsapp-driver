@@ -1,4 +1,4 @@
-from wspdriver.driver import WhatsappDriver
+from wspdriver.driver import WhatsappDriver, NonBMPUnicodeNotSupportedError
 
 
 class REPL(object):
@@ -73,7 +73,10 @@ class REPL(object):
         if user_input == 'send_message':
             phone_number = input('To: ')
             message = input('Message: ')
-            self.driver.send_message(phone_number, message)
+            try:
+                self.driver.send_message(phone_number, message)
+            except NonBMPUnicodeNotSupportedError:
+                print('Sending emojis not supported... blame ChromeDriver')
             return 'Ok.'
 
         return 'Command not understood: {}'.format(user_input)

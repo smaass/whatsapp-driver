@@ -3,6 +3,8 @@ import re
 
 from datetime import datetime
 
+from bs4 import BeautifulSoup
+
 
 class WhatsappMessage(object):
 
@@ -58,12 +60,20 @@ class WSPTextMessage(WhatsappMessage):
         bubble_text = message_element.find_element_by_css_selector(
             '.bubble .selectable-text'
         )
-        self.text = bubble_text.text
+        self.text = self.transform_emojis_to_text(bubble_text)
 
         to_hash = '{}{}{}'.format(
             self.datetime, self.author_name, self.text
         )
         self.id = hashlib.md5(to_hash.encode()).hexdigest()
+
+    def transform_emojis_to_text(self, bubble_element):
+
+        html = bubble_element.get_attribute('outerHTML')
+        dom = BeautifulSoup(html, 'html.parser')
+        for img in dom.find_all('img'):
+            img.replace_with(img['data-plain-text'])
+        return dom.text
 
     def __str__(self):
         return '[{}] {}: {}'.format(

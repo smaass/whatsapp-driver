@@ -6,7 +6,8 @@ from io import BytesIO
 
 from PIL import Image
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.common.exceptions import TimeoutException, \
+    NoSuchElementException, WebDriverException
 from selenium.webdriver import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -303,11 +304,20 @@ class WhatsappDriver(object):
         input_element = self.web_driver.find_element_by_class_name(
             'pluggable-input'
         )
-        input_element.send_keys(message)
-        send_button = self.web_driver.find_element_by_css_selector(
-            'button.compose-btn-send'
-        )
-        send_button.click()
+        try:
+            input_element.send_keys(message)
+            send_button = self.web_driver.find_element_by_css_selector(
+                'button.compose-btn-send'
+            )
+            send_button.click()
+        except WebDriverException as e:
+            if 'BMP' in e.msg:
+                raise NonBMPUnicodeNotSupportedError(e.msg)
+            raise e
+
+
+class NonBMPUnicodeNotSupportedError(Exception):
+    pass
 
 
 class NotLoggedInException(Exception):
