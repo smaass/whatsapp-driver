@@ -53,6 +53,10 @@ class WhatsappDriver(object):
             )
         )
         self.whatsapp_web_version = self.get_wsp_web_version()
+        self.running = True
+
+    def stop(self):
+        self.running = False
 
     def get_wsp_web_version(self):
 
@@ -126,7 +130,7 @@ class WhatsappDriver(object):
     def wait_for_login(self, timeout=None):
 
         seconds_passed = 0
-        while timeout is None or timeout > seconds_passed:
+        while self.running and (timeout is None or timeout > seconds_passed):
             main = self.web_driver.find_elements_by_class_name(
                 'app-wrapper-main'
             )
@@ -139,7 +143,7 @@ class WhatsappDriver(object):
 
     def is_logged_in(self):
 
-        while True:
+        while self.running:
             main = self.web_driver.find_elements_by_class_name(
                 'app-wrapper-main'
             )
