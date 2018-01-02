@@ -45,6 +45,7 @@ class WhatsappDriver(object):
 
     def __init__(self, web_driver):
 
+        self.running = True
         self.web_driver = web_driver
         web_driver.get('https://web.whatsapp.com')
         WebDriverWait(web_driver, 10).until(
@@ -53,7 +54,6 @@ class WhatsappDriver(object):
             )
         )
         self.whatsapp_web_version = self.get_wsp_web_version()
-        self.running = True
 
     def stop(self):
         self.running = False
