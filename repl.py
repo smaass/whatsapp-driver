@@ -39,6 +39,7 @@ class REPL(object):
 
         if user_input == 'get_user_data':
             user = self.driver.get_user_data()
+            user.save_avatar('avatar.png')
             return '{}, {}'.format(user.phone_number, user.name)
 
         if user_input == 'whatsapp_web_version':

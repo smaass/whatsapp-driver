@@ -43,6 +43,8 @@ class WhatsappDriver(object):
 
         return cls(web_driver)
 
+    APP_WRAPPER_SELECTOR = '.app-wrapper-web'
+
     def __init__(self, web_driver):
 
         self.running = True
@@ -50,7 +52,7 @@ class WhatsappDriver(object):
         web_driver.get('https://web.whatsapp.com')
         WebDriverWait(web_driver, 10).until(
             EC.presence_of_element_located(
-                (By.CLASS_NAME, 'app-wrapper')
+                (By.CSS_SELECTOR, self.APP_WRAPPER_SELECTOR)
             )
         )
         self.whatsapp_web_version = self.get_wsp_web_version()
@@ -75,26 +77,41 @@ class WhatsappDriver(object):
         except NoSuchElementException:
             return None
 
-    def wait_until(self, finder, css_selector, timeout):
-
+    def wait_until(
+            self,
+            finder,
+            css_selector,
+            timeout,
+            by_method=By.CSS_SELECTOR
+    ):
         return WebDriverWait(self.web_driver, timeout).until(
-            finder((By.CSS_SELECTOR, css_selector))
+            finder((by_method, css_selector))
         )
 
-    def wait_until_clickable(self, css_selector, timeout=10):
-
+    def wait_until_clickable(
+            self,
+            query,
+            timeout=10,
+            by_method=By.CSS_SELECTOR
+    ):
         return self.wait_until(
             EC.element_to_be_clickable,
-            css_selector,
-            timeout
+            query,
+            timeout=timeout,
+            by_method=by_method
         )
 
-    def wait_until_located(self, css_selector, timeout=10):
-
+    def wait_until_located(
+            self,
+            query,
+            timeout=10,
+            by_method=By.CSS_SELECTOR
+    ):
         return self.wait_until(
             EC.presence_of_element_located,
-            css_selector,
-            timeout
+            query,
+            timeout=timeout,
+            by_method=by_method
         )
 
     def quit(self):
@@ -123,16 +140,20 @@ class WhatsappDriver(object):
         if self.is_logged_in():
             raise AlreadyLoggedInException()
 
-        login_element = self.wait_until_located('.app-wrapper img')
+        login_element = self.wait_until_located(
+            '{} img'.format(self.APP_WRAPPER_SELECTOR)
+        )
         login_image_base64 = login_element.get_attribute('src')
         return login_image_base64
+
+    APP_MAIN_SELECTOR = '.app'
 
     def wait_for_login(self, timeout=None):
 
         seconds_passed = 0
         while self.running and (timeout is None or timeout > seconds_passed):
-            main = self.web_driver.find_elements_by_class_name(
-                'app-wrapper-main'
+            main = self.web_driver.find_elements_by_css_selector(
+                self.APP_MAIN_SELECTOR
             )
             if len(main) > 0:
                 return
@@ -144,8 +165,8 @@ class WhatsappDriver(object):
     def is_logged_in(self):
 
         while self.running:
-            main = self.web_driver.find_elements_by_class_name(
-                'app-wrapper-main'
+            main = self.web_driver.find_elements_by_css_selector(
+                self.APP_MAIN_SELECTOR
             )
             if len(main) > 0:
                 return True
@@ -172,22 +193,37 @@ class WhatsappDriver(object):
         top = img_location['y']
         right = left + img_size['width']
         bottom = top + img_size['height']
-        image.crop((left, top, right, bottom))
+        cropped_image = image.crop((left, top, right, bottom))
 
         self.web_driver.close()
         self.web_driver.switch_to_window(windows[0])
-        return image
+        return cropped_image
+
+    SIDE_HEADER_IMG_CSS_SELECTOR = '#side header img'
+    USER_NAME_XPATH = "(//div[contains(@class, 'selectable-text')])[1]"
+    USER_AVATAR_XPATH = "//div[@style='width: 200px; height: 200px; " \
+                        "top: 0px; left: 0px; position: absolute;']/img"
+    USER_VIEW_PICTURE_BUTTON_XPATH = '//html//li[1]/div'
+    USER_PHONE_XPATH = "(//span[@dir='auto'])[1]"
+    CLOSE_IMAGE_VIEWER_CSS_SELECTOR = 'span[data-icon="x-viewer"]'
+    CLOSE_USER_PROFILE_XPATH = "//span[@data-icon='back-light']/parent::*"
 
     def get_user_data(self):
 
         if not self.is_logged_in():
             raise NotLoggedInException()
 
-        self.wait_until_clickable('.pane-list-user .avatar').click()
-        name = self.wait_until_clickable('.drawer .pluggable-input-body').text
+        self.wait_until_clickable(self.SIDE_HEADER_IMG_CSS_SELECTOR).click()
+        name = self.wait_until_clickable(
+            self.USER_NAME_XPATH,
+            by_method=By.XPATH
+        ).text
 
         try:
-            avatar_element = self.wait_until_clickable('.drawer img')
+            avatar_element = self.wait_until_clickable(
+                self.USER_AVATAR_XPATH,
+                by_method=By.XPATH
+            )
         except TimeoutException:
             raise AvatarNotFoundException()
 
@@ -199,13 +235,22 @@ class WhatsappDriver(object):
             .move_to_element(avatar_element)\
             .click().perform()
 
-        self.wait_until_clickable('li div[title="Ver foto"]').click()
-        phone_number = self.wait_until_located('span.emojitext').text
+        self.wait_until_clickable(
+            self.USER_VIEW_PICTURE_BUTTON_XPATH,
+            by_method=By.XPATH
+        ).click()
+        phone_number = self.wait_until_located(
+            self.USER_PHONE_XPATH,
+            by_method=By.XPATH
+        ).text
 
-        self.wait_until_clickable('span[data-icon="x-viewer"]').click()
+        self.wait_until_clickable(self.CLOSE_IMAGE_VIEWER_CSS_SELECTOR).click()
         time.sleep(0.6)  # Animation...
 
-        self.wait_until_clickable('.drawer-header .btn-close-drawer').click()
+        self.wait_until_clickable(
+            self.CLOSE_USER_PROFILE_XPATH,
+            by_method=By.XPATH
+        ).click()
         time.sleep(0.5)  # Animation...
         return User(phone_number, name, avatar)
 
